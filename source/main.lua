@@ -15,6 +15,58 @@ local playTime = 30 * 1000
 local coinSprite = nil
 local score = 0
 
+
+local stickFigure = {
+	head = { x = 50, y = 20, width = 10, height = 10 },
+	body = { x = 50, y = 30, width = 2, height = 20 },
+	leftArm = { x = 40, y = 30, width = 10, height = 2 },
+	rightArm = { x = 60, y = 30, width = 10, height = 2 },
+	leftLeg = { x = 45, y = 50, width = 2, height = 20 },
+	rightLeg = { x = 55, y = 50, width = 2, height = 20 }
+}
+
+  function drawStickFigure(stickman)
+    drawRect(stickman.head.x, stickman.head.y, stickman.head.width, stickman.head.height)
+    drawRect(stickman.body.x, stickman.body.y, stickman.body.width, stickman.body.height)
+    drawRect(stickman.leftArm.x, stickman.leftArm.y, stickman.leftArm.width, stickman.leftArm.height)
+    drawRect(stickman.rightArm.x, stickman.rightArm.y, stickman.rightArm.width, stickman.rightArm.height)
+    drawRect(stickman.leftLeg.x, stickman.leftLeg.y, stickman.leftLeg.width, stickman.leftLeg.height)
+    drawRect(stickman.rightLeg.x, stickman.rightLeg.y, stickman.rightLeg.width, stickman.rightLeg.height)
+  end
+
+  function drawRect(x, y, width, height)
+    -- Implement your rendering code here to draw a rectangle at the given coordinates
+	gfx.drawRect(x, y, width, height)
+	
+  end
+
+  function moveStickFigure(stickman)
+	changeStickFigureX(stickman)
+	changeStickFigureY(stickman)
+
+	drawStickFigure(stickman)
+  end
+
+  function changeStickFigureX(stickman)
+	stickman.head.x += 1
+	stickman.body.x += 1
+	stickman.leftArm.x += 1
+	stickman.rightArm.x += 1
+	stickman.leftLeg.x += 1
+	stickman.rightLeg.x += 1
+
+  end
+  
+  function changeStickFigureY(stickman)
+	stickman.head.y += 1
+	stickman.body.y += 1
+	stickman.leftArm.y += 1
+	stickman.rightArm.y += 1
+	stickman.leftLeg.y += 1
+	stickman.rightLeg.y += 1
+  end
+
+
 local function resetTimer()
 	playTimer = playdate.timer.new(playTime, playTime, 0, playdate.easingFunctions.linear)
 end
@@ -32,12 +84,15 @@ local function initialize()
 	playerSprite:moveTo(200, 120)
 	playerSprite:setCollideRect(0, 0, playerSprite:getSize())
 	playerSprite:add()
+	
 
+	
 	local coinImage = gfx.image.new("images/coin")
     coinSprite = gfx.sprite.new(coinImage)
 	moveCoin()
 	coinSprite:setCollideRect(0, 0, coinSprite:getSize())
 	coinSprite:add()
+	--#region
 
 	local backgroundImage = gfx.image.new("images/background")
 	gfx.sprite.setBackgroundDrawingCallback(
@@ -47,7 +102,7 @@ local function initialize()
 			gfx.clearClipRect()
 		end
 	)
-
+	
 	resetTimer()
 end
 
@@ -80,10 +135,12 @@ function playdate.update()
 			score += 1
 		end
 	end
-
 	playdate.timer.updateTimers()
 	gfx.sprite.update()
 
 	gfx.drawText("Time: " .. math.ceil(playTimer.value/1000), 5, 5)
 	gfx.drawText("Score: " .. score, 320, 5)
+	
+	moveStickFigure(stickFigure)
+
 end
