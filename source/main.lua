@@ -17,12 +17,14 @@ local score = 0
 
 
 local stickFigure = {
-	head = { x = 50, y = 20, width = 10, height = 10 },
+	head = { x = 45, y = 20, width = 10, height = 10 },
 	body = { x = 50, y = 30, width = 2, height = 20 },
 	leftArm = { x = 40, y = 30, width = 10, height = 2 },
-	rightArm = { x = 60, y = 30, width = 10, height = 2 },
+	rightArm = { x = 50, y = 30, width = 10, height = 2 },
+	hip = { x = 45, y = 50, width = 10, height = 2 },
 	leftLeg = { x = 45, y = 50, width = 2, height = 20 },
-	rightLeg = { x = 55, y = 50, width = 2, height = 20 }
+	rightLeg = { x = 55, y = 50, width = 2, height = 20 },
+	roadSpot = { x = 146, y = 116 }
 }
 
   function drawStickFigure(stickman)
@@ -30,6 +32,7 @@ local stickFigure = {
     drawRect(stickman.body.x, stickman.body.y, stickman.body.width, stickman.body.height)
     drawRect(stickman.leftArm.x, stickman.leftArm.y, stickman.leftArm.width, stickman.leftArm.height)
     drawRect(stickman.rightArm.x, stickman.rightArm.y, stickman.rightArm.width, stickman.rightArm.height)
+	drawRect(stickman.hip.x, stickman.hip.y, stickman.hip.width, stickman.hip.height)
     drawRect(stickman.leftLeg.x, stickman.leftLeg.y, stickman.leftLeg.width, stickman.leftLeg.height)
     drawRect(stickman.rightLeg.x, stickman.rightLeg.y, stickman.rightLeg.width, stickman.rightLeg.height)
   end
@@ -41,10 +44,15 @@ local stickFigure = {
   end
 
   function moveStickFigure(stickman)
-	changeStickFigureX(stickman)
-	changeStickFigureY(stickman)
+	if not inRoad(stickman) then
+		changeStickFigureX(stickman)
+		changeStickFigureY(stickman)
+  	end
+	  drawStickFigure(stickman)
+  end
 
-	drawStickFigure(stickman)
+  function inRoad(stickman)
+	return stickman.head.x > stickman.roadSpot.x
   end
 
   function changeStickFigureX(stickman)
@@ -52,6 +60,7 @@ local stickFigure = {
 	stickman.body.x += 1
 	stickman.leftArm.x += 1
 	stickman.rightArm.x += 1
+	stickman.hip.x += 1
 	stickman.leftLeg.x += 1
 	stickman.rightLeg.x += 1
 
@@ -62,6 +71,7 @@ local stickFigure = {
 	stickman.body.y += 1
 	stickman.leftArm.y += 1
 	stickman.rightArm.y += 1
+	stickman.hip.y += 1
 	stickman.leftLeg.y += 1
 	stickman.rightLeg.y += 1
   end
@@ -138,9 +148,9 @@ function playdate.update()
 	playdate.timer.updateTimers()
 	gfx.sprite.update()
 
-	gfx.drawText("Time: " .. math.ceil(playTimer.value/1000), 5, 5)
-	gfx.drawText("Score: " .. score, 320, 5)
-	
+	gfx.drawText("X: " .. stickFigure.head.x, 5, 5)
+	gfx.drawText("Y: " .. stickFigure.head.y, 320, 5)
+	--146, 116
 	moveStickFigure(stickFigure)
 
 end
