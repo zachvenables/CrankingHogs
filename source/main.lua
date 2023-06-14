@@ -5,11 +5,16 @@ import "CoreLibs/timer"
 
 local gfx <const> = playdate.graphics
 
+local theBikeR = nil
+local theBikeL = nil
+
 local playerSprite = nil
-local playerSpeed = 4
+local playerSpeed = 10
 
 local firstEnemySprite = nil
 local enemySpeed = 1
+
+local headSize = 25
 
 local firstEnemyX = 100
 local firstEnemyY = 100
@@ -30,6 +35,7 @@ local firstEnemy = nil
 local secondEnemy = nil
 local thirdEnemy = nil
 
+local moods = {"ANGRY!", "Irritated", "Dangerous!!!!!!", "Pacifist"}
 
 local function resetTimer()
 	playTimer = playdate.timer.new(playTime, playTime, 0, playdate.easingFunctions.linear)
@@ -37,26 +43,41 @@ end
 
 local function initialize()
 	math.randomseed(playdate.getSecondsSinceEpoch())
-	local playerImage = gfx.image.new("images/player")
-	playerSprite = gfx.sprite.new(playerImage)
-	playerSprite:moveTo(50, 160)
-	playerSprite:setCollideRect(0, 0, playerSprite:getSize())
-	playerSprite:add()
+	local playerImage = gfx.image.new("images/broguy")
+	--playerSprite = gfx.sprite.new(playerImage)
+	--playerSprite:moveTo(50, 160)
+	--playerSprite:setCollideRect(0, 0, playerSprite:getSize())
+	--playerSprite:add()
+
+	local bikeImageR = gfx.image.new("images/bike_r")
+	local bikeImageL = gfx.image.new("images/bike_l")
+
+	theBikeL = {sprite = gfx.sprite.new(bikeImageL), isDrawn = false}
+
+	theBikeR = {sprite = gfx.sprite.new(bikeImageR), isDrawn = true}
+	theBikeR.sprite:moveTo(100, 160)
+	theBikeR.sprite:setCollideRect(0, 0, theBikeR.sprite:getSize())
+	theBikeR.sprite:add()
 
 	local enemyImage = gfx.image.new("images/enemy")
+	local moodBubble = gfx.image.new("images/mood")
+
     firstEnemySprite = gfx.sprite.new(enemyImage)
 	firstEnemySprite:setCollideRect(0, 0, firstEnemySprite:getSize())
-	firstEnemy = { sprite = firstEnemySprite, isCreated = false, x = firstEnemyX, y = firstEnemyY, speed = enemySpeed, xStoppingPoint = 152 }
+	fTextSprite = gfx.sprite.new(moodBubble)
+	firstEnemy = { sprite = firstEnemySprite, isCreated = false, x = firstEnemyX, y = firstEnemyY, speed = enemySpeed, xStoppingPoint = 152, bubble = {sprite = fTextSprite, x = firstEnemyX, y = firstEnemyY - headSize, text = moods[2]} }
 
 	secondEnemySprite = gfx.sprite.new(enemyImage)
 	secondEnemySprite:setCollideRect(0, 0, firstEnemySprite:getSize())
-	secondEnemy = { sprite = secondEnemySprite, isCreated = false, x = secondEnemyX, y = secondEnemyY, speed = enemySpeed, xStoppingPoint = 174 }
+	sTextSprite = gfx.sprite.new(moodBubble)
+	secondEnemy = { sprite = secondEnemySprite, isCreated = false, x = secondEnemyX, y = secondEnemyY, speed = enemySpeed, xStoppingPoint = 174, bubble = {sprite = sTextSprite, x = secondEnemyX, y = secondEnemyY - headSize, text = moods[1]} }
 
 	thirdEnemySprite = gfx.sprite.new(enemyImage)
 	thirdEnemySprite:setCollideRect(0, 0, firstEnemySprite:getSize())
-	thirdEnemy = { sprite = thirdEnemySprite, isCreated = false, x = thirdEnemyX, y = thirdEnemyY, speed = enemySpeed, xStoppingPoint = 190 }
+	tTextSprite = gfx.sprite.new(moodBubble)
+	thirdEnemy = { sprite = thirdEnemySprite, isCreated = false, x = thirdEnemyX, y = thirdEnemyY, speed = enemySpeed, xStoppingPoint = 190, bubble = {sprite = tTextSprite, x = thirdEnemyX, y = thirdEnemyY - headSize, text = moods[3]} }
 
-	local backgroundImage = gfx.image.new("images/background")
+	local backgroundImage = gfx.image.new("images/houses")
 	gfx.sprite.setBackgroundDrawingCallback(
 		function(x, y, width, height)
 			gfx.setClipRect(x, y, width, height)
@@ -70,10 +91,17 @@ end
 
 initialize()
 
+function getMoodText(num)
+	return moods[math.random(table.getn(moods) - 1)]
+	--return moods[num]
+end
+
 function spawnEnemy(enemy, criteria)
 	if(criteria) then
 		enemy.sprite:moveTo(enemy.x, enemy.y)
 		enemy.sprite:add()
+		enemy.bubble.sprite:moveTo(enemy.bubble.x, enemy.bubble.y)
+		enemy.bubble.sprite:add()
 		enemy.isCreated = true
 	end
 end
@@ -83,6 +111,15 @@ function checkAndStopBaddies(enemy)
 		enemy.sprite:moveBy(enemy.speed, enemy.speed)
 		enemy.x += enemy.speed
 		enemy.y += enemy.speed
+		enemy.bubble.x += enemy.speed
+		enemy.bubble.y += enemy.speed		
+		--gfx.drawText(enemy.bubble.text.text, enemy.bubble.text.x, enemy.bubble.text.y)
+	end
+end
+
+function addText(enemy)
+	if(enemy.isCreated) then
+		gfx.drawTextInRect(enemy.bubble.text, enemy.bubble.x, enemy.bubble.y, 30, 50)
 	end
 end
 
@@ -95,16 +132,43 @@ function playdate.update()
 		end
 	else
 		if playdate.buttonIsPressed(playdate.kButtonUp) then
-			playerSprite:moveBy(0, -playerSpeed)
+			if (theBikeL.isDrawn) then
+				theBikeL.sprite:moveBy(0, -playerSpeed)
+			else
+				theBikeR.sprite:moveBy(0, -playerSpeed)
+			end		
 		end
 		if playdate.buttonIsPressed(playdate.kButtonRight) then
-			playerSprite:moveBy(playerSpeed, 0)
+			if (not theBikeR.isDrawn) then
+				theBikeR.sprite:moveTo(theBikeL.sprite.x, theBikeL.sprite.y)
+				theBikeR.sprite:setCollideRect(0, 0, theBikeR.sprite:getSize())
+				theBikeR.sprite:add()
+				theBikeL.isDrawn = false
+				theBikeR.isDrawn = true
+				theBikeL.sprite:remove()
+			else
+				theBikeR.sprite:moveBy(playerSpeed, 0)
+			end				
 		end
 		if playdate.buttonIsPressed(playdate.kButtonDown) then
-			playerSprite:moveBy(0, playerSpeed)
+			if (theBikeL.isDrawn) then
+				theBikeL.sprite:moveBy(0, playerSpeed)
+			else
+				theBikeR.sprite:moveBy(0, playerSpeed)
+			end
 		end
 		if playdate.buttonIsPressed(playdate.kButtonLeft) then
-			playerSprite:moveBy(-playerSpeed, 0)
+			--theBike:moveBy(-playerSpeed, 0)
+			if (not theBikeL.isDrawn) then			
+				theBikeL.sprite:moveTo(theBikeR.sprite.x, theBikeR.sprite.y)
+				theBikeL.sprite:setCollideRect(0, 0, theBikeL.sprite:getSize())
+				theBikeL.sprite:add()
+				theBikeL.isDrawn = true
+				theBikeR.isDrawn = false
+				theBikeR.sprite:remove()
+			else
+				theBikeL.sprite:moveBy(-playerSpeed, 0)
+			end
 		end
 
 		local collisions = firstEnemySprite:overlappingSprites()
@@ -131,7 +195,11 @@ function playdate.update()
 
 	playdate.timer.updateTimers()
 	gfx.sprite.update()
-	gfx.drawText("X: " .. firstEnemyX, 5, 5)
-	gfx.drawText("Y: " .. firstEnemyY, 320, 5)
+	--addText(firstEnemy)
+	--addText(secondEnemy)
+	--addText(thirdEnemy)
+	
+	gfx.drawText("X: " .. firstEnemy.x, 5, 5)
+	gfx.drawText("Y: " .. firstEnemy.y, 320, 5)
 	gfx.drawText("Time: " .. math.ceil(playTimer.value/1000), 35, 5)
 end
