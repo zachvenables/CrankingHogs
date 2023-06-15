@@ -2,6 +2,7 @@ import "CoreLibs/object"
 import "CoreLibs/graphics"
 import "CoreLibs/sprites"
 import "CoreLibs/timer"
+import "CoreLibs/ui"
 
 local gfx <const> = playdate.graphics
 
@@ -22,6 +23,8 @@ local firstEnemyY = 100
 local secondEnemyX = 165
 local secondEnemyY = 100
 
+local maxSpeed = 20
+
 local thirdEnemyX = 165
 local thirdEnemyY = 110
 
@@ -35,11 +38,16 @@ local firstEnemy = nil
 local secondEnemy = nil
 local thirdEnemy = nil
 
+local enemies = {}
+
 local moods = {"ANGRY!", "Irritated", "Dangerous!!!!!!", "Pacifist"}
 
 local function resetTimer()
 	playTimer = playdate.timer.new(playTime, playTime, 0, playdate.easingFunctions.linear)
 end
+
+local enemyImage = gfx.image.new("images/enemy")
+local moodBubble = gfx.image.new("images/mood")
 
 local function initialize()
 	math.randomseed(playdate.getSecondsSinceEpoch())
@@ -54,18 +62,32 @@ local function initialize()
 
 	theBikeL = {sprite = gfx.sprite.new(bikeImageL), isDrawn = false, xSpeed = 0, ySpeed = 0}
 
-	theBikeR = {sprite = gfx.sprite.new(bikeImageR), isDrawn = true, xSpeed = 0, ySpeed = 0}
+	theBikeR = {sprite = gfx.sprite.new(bikeImageR), isDrawn = true, clutchSlipped = false, xSpeed = 0, ySpeed = 0}
 	theBikeR.sprite:moveTo(100, 160)
 	theBikeR.sprite:setCollideRect(0, 0, theBikeR.sprite:getSize())
 	theBikeR.sprite:add()
 
-	local enemyImage = gfx.image.new("images/enemy")
-	local moodBubble = gfx.image.new("images/mood")
-
     firstEnemySprite = gfx.sprite.new(enemyImage)
 	firstEnemySprite:setCollideRect(0, 0, firstEnemySprite:getSize())
 	fTextSprite = gfx.sprite.new(moodBubble)
-	firstEnemy = { sprite = firstEnemySprite, isCreated = false, flightDistance = 0, flightSpeed = 0, flightDirection = nil, isHit = false, x = firstEnemyX, y = firstEnemyY, speed = enemySpeed, xStoppingPoint = 200, bubble = {sprite = fTextSprite, x = firstEnemyX, y = firstEnemyY - headSize, text = moods[2]} }
+	firstEnemy = { 
+		sprite = firstEnemySprite, 
+		isCreated = false, 
+		flightDistance = 0, 
+		flightSpeed = 0, 
+		flightDirection = nil, 
+		isHit = false, 
+		x = firstEnemyX, 
+		y = firstEnemyY, 
+		speed = enemySpeed, 
+		xStoppingPoint = 200, 
+		bubble = {
+			sprite = fTextSprite, 
+			x = firstEnemyX, 
+			y = firstEnemyY - headSize, 
+			text = moods[2]
+		} 
+	}
 
 	secondEnemySprite = gfx.sprite.new(enemyImage)
 	secondEnemySprite:setCollideRect(0, 0, firstEnemySprite:getSize())
@@ -89,11 +111,37 @@ local function initialize()
 	resetTimer()
 end
 
+playdate.ui.crankIndicator:start()
+
 initialize()
 
-function getMoodText(num)
+function getMoodText()
 	return moods[math.random(table.getn(moods) - 1)]
 	--return moods[num]
+end
+
+--use this to create dynamic enemies
+function createEnemy()
+	local e = {
+		sprite = gfx.sprite.new(enemyImage),
+		isCreated = false,
+		flightDistance = 0,
+		flightSpeed = 0,
+		flightDirection = nil,
+		isHit = false,
+		x = 165,
+		y = 100,
+		speed = enemySpeed,
+		xStoppingPoint = math.random(200, 220),
+		bubble = {
+			sprite = gfx.sprite.new(moodBubble),
+			x = 165,
+			y = 100 - headSize,
+			text =  getMoodText()
+		}
+	}
+
+	e.sprite:setCollideRect(0, 0, e.sprite:getSize())
 end
 
 function spawnEnemy(enemy, criteria)
@@ -156,65 +204,82 @@ function playdate.update()
 	-- 		--moveCoin()
 	-- 		score = 0
 	-- 	end
-	-- else
-		if playdate.buttonIsPressed(playdate.kButtonUp) then
-			if (theBikeL.isDrawn and theBikeL.sprite.y > 110) then
-				theBikeL.xSpeed = 0
-				theBikeL.ySpeed = playerSpeed
-				theBikeL.sprite:moveBy(0, -playerSpeed)
-			else
-				if (theBikeR.sprite.y > 110) then
-					theBikeR.xSpeed = 0
-					theBikeR.ySpeed = playerSpeed
-					theBikeR.sprite:moveBy(0, -playerSpeed)
-				end
-			end		
-		end
-		if playdate.buttonIsPressed(playdate.kButtonRight) then
-			if (not theBikeR.isDrawn) then
-				theBikeR.sprite:moveTo(theBikeL.sprite.x, theBikeL.sprite.y)
-				theBikeR.sprite:setCollideRect(0, 0, theBikeR.sprite:getSize())
-				theBikeR.sprite:add()
-				theBikeL.isDrawn = false
-				theBikeR.isDrawn = true
-				theBikeL.sprite:remove()
-			else
-				theBikeR.xSpeed = playerSpeed
-				theBikeR.ySpeed = 0
-				theBikeR.sprite:moveBy(playerSpeed, 0)
-			end				
-		end
-		if playdate.buttonIsPressed(playdate.kButtonDown) then
-			if (theBikeL.isDrawn) then
-				theBikeL.sprite:moveBy(0, playerSpeed)
-				theBikeL.xSpeed = 0
-				theBikeL.ySpeed = playerSpeed
-			else
-				theBikeR.sprite:moveBy(0, playerSpeed)
-				theBikeR.xSpeed = 0
-				theBikeR.ySpeed = playerSpeed
-			end
-		end
-		if playdate.buttonIsPressed(playdate.kButtonLeft) then
-			--theBike:moveBy(-playerSpeed, 0)
-			if (not theBikeL.isDrawn) then			
-				theBikeL.sprite:moveTo(theBikeR.sprite.x, theBikeR.sprite.y)
-				theBikeL.sprite:setCollideRect(0, 0, theBikeL.sprite:getSize())
-				theBikeL.sprite:add()
-				theBikeL.isDrawn = true
-				theBikeR.isDrawn = false
-				theBikeR.sprite:remove()
-			else
-				if (theBikeL.sprite.x > 40) then
-					theBikeL.sprite:moveBy(-playerSpeed, 0)
-					theBikeL.xSpeed = playerSpeed
-					theBikeL.ySpeed = 0
-				else
-					theBikeL.xSpeed = playerSpeed
-					theBikeL.ySpeed = 0			
-				end
-			end
-		end
+	-- else	
+
+	if playdate.isCrankDocked() then
+		playdate.ui.crankIndicator:update()
+		return
+	end
+
+	if playdate.buttonIsPressed(playdate.kButtonA) and not theBikeR.clutchSlipped then
+		theBikeR.clutchSlipped = true
+		theBikeR.xSpeed = (playdate.getCrankPosition() / 360) * maxSpeed
+	end
+
+	--ensure we don't cause a memory crash
+	if theBikeR.clutchSlipped and theBikeR.sprite.x < 600 then
+		theBikeR.sprite:moveBy(theBikeR.xSpeed, 0)
+	end
+		
+	--Hogs only go forward when clutch is released based on throttle
+		-- if playdate.buttonIsPressed(playdate.kButtonUp) then
+		-- 	if (theBikeL.isDrawn and theBikeL.sprite.y > 110) then
+		-- 		theBikeL.xSpeed = 0
+		-- 		theBikeL.ySpeed = playerSpeed
+		-- 		theBikeL.sprite:moveBy(0, -playerSpeed)
+		-- 	else
+		-- 		if (theBikeR.sprite.y > 110) then
+		-- 			theBikeR.xSpeed = 0
+		-- 			theBikeR.ySpeed = playerSpeed
+		-- 			theBikeR.sprite:moveBy(0, -playerSpeed)
+		-- 		end
+		-- 	end		
+		-- end
+		-- if playdate.buttonIsPressed(playdate.kButtonRight) then
+		-- 	if (not theBikeR.isDrawn) then
+		-- 		theBikeR.sprite:moveTo(theBikeL.sprite.x, theBikeL.sprite.y)
+		-- 		theBikeR.sprite:setCollideRect(0, 0, theBikeR.sprite:getSize())
+		-- 		theBikeR.sprite:add()
+		-- 		theBikeL.isDrawn = false
+		-- 		theBikeR.isDrawn = true
+		-- 		theBikeL.sprite:remove()
+		-- 	else
+		-- 		theBikeR.xSpeed = playerSpeed
+		-- 		theBikeR.ySpeed = 0
+		-- 		theBikeR.sprite:moveBy(playerSpeed, 0)
+		-- 	end				
+		-- end
+		-- if playdate.buttonIsPressed(playdate.kButtonDown) then
+		-- 	if (theBikeL.isDrawn) then
+		-- 		theBikeL.sprite:moveBy(0, playerSpeed)
+		-- 		theBikeL.xSpeed = 0
+		-- 		theBikeL.ySpeed = playerSpeed
+		-- 	else
+		-- 		theBikeR.sprite:moveBy(0, playerSpeed)
+		-- 		theBikeR.xSpeed = 0
+		-- 		theBikeR.ySpeed = playerSpeed
+		-- 	end
+		-- end
+		-- if playdate.buttonIsPressed(playdate.kButtonLeft) then
+		-- 	--theBike:moveBy(-playerSpeed, 0)
+		-- 	if (not theBikeL.isDrawn) then			
+		-- 		theBikeL.sprite:moveTo(theBikeR.sprite.x, theBikeR.sprite.y)
+		-- 		theBikeL.sprite:setCollideRect(0, 0, theBikeL.sprite:getSize())
+		-- 		theBikeL.sprite:add()
+		-- 		theBikeL.isDrawn = true
+		-- 		theBikeR.isDrawn = false
+		-- 		theBikeR.sprite:remove()
+		-- 	else
+		-- 		if (theBikeL.sprite.x > 40) then
+		-- 			theBikeL.sprite:moveBy(-playerSpeed, 0)
+		-- 			theBikeL.xSpeed = playerSpeed
+		-- 			theBikeL.ySpeed = 0
+		-- 		else
+		-- 			theBikeL.xSpeed = playerSpeed
+		-- 			theBikeL.ySpeed = 0			
+		-- 		end
+		-- 	end
+		-- end
 
 		local collisionsR = theBikeR.sprite:overlappingSprites()
 		local collisionsL = theBikeL.sprite:overlappingSprites()
@@ -225,17 +290,12 @@ function playdate.update()
 
 				if (not enemy.isHit) then
 					-- enemy.sprite:moveBy(theBikeR.xSpeed * 1.5, theBikeR.ySpeed * 1.01)
-					enemy.flightDistance = theBikeR.xSpeed * 10
-					enemy.flightSpeed = 12
+					enemy.flightDistance = math.random(math.floor(theBikeR.xSpeed) * 8, math.ceil(theBikeR.xSpeed) * 10)
+					enemy.flightSpeed = theBikeR.xSpeed * 1.01
 					enemy.flightDirection = "right"
-					--enemy.x += (theBikeR.xSpeed * 1.5)
-					--enemy.y += (theBikeR.ySpeed * )
 					enemy.bubble.sprite:remove()
 					enemy.isHit = true
-				end
-				
-				-- s.x += (theBikeR.xSpeed * 1.5)
-				-- s.y += (theBikeR.ySpeed * 1.01)			
+				end							
 			end
 		end
 
@@ -244,31 +304,24 @@ function playdate.update()
 				local enemy = getEnemy(collisionsL[i])
 
 				if (not enemy.isHit) then
-					enemy.flightDistance = theBikeR.xSpeed * 10
+					enemy.flightDistance = math.random(theBikeL.xSpeed * 8, theBikeL.xSpeed * 10)
 					enemy.flightSpeed = 12
 					enemy.flightDirection = "left"
 					enemy.bubble.sprite:remove()
 					enemy.isHit = true
 				end
-				
-				-- s.x += (-theBikeL.xSpeed * 1.5)
-				-- s.y += theBikeL.ySpeed * 1.01
 			end
 		end
-		--if #collisions >= 1 then
-			--moveCoin()
-			--score += 1
-		--end
 
 		--this is just using the timer.  we can make some criteria based 
 		-- off of CRANKING THAT HOG
-		firstEnemyCriteria = playTimer.value / 1000 < 25;
+		firstEnemyCriteria = playdate.getCrankPosition() > 90;
 		spawnEnemy(firstEnemy, firstEnemyCriteria)
 
-		secondEnemyCriteria = playTimer.value / 1000 < 20;
+		secondEnemyCriteria = playdate.getCrankPosition() > 135;
 		spawnEnemy(secondEnemy, secondEnemyCriteria)
 
-		thirdEnemyCriteria = playTimer.value / 1000 < 15;
+		thirdEnemyCriteria = playdate.getCrankPosition() > 180;
 		spawnEnemy(thirdEnemy, thirdEnemyCriteria)
 
 		checkAndStopBaddies(firstEnemy)
@@ -281,12 +334,12 @@ function playdate.update()
 	--addText(firstEnemy)
 	--addText(secondEnemy)
 	--addText(thirdEnemy)
-	if (theBikeL.isDrawn) then
-		gfx.drawText("X: " .. theBikeL.sprite.x, 5, 5)
-		gfx.drawText("Y: " .. theBikeL.sprite.y, 320, 5)
-	else
-		gfx.drawText("X: " .. theBikeR.sprite.x, 5, 5)
-		gfx.drawText("Y: " .. theBikeR.sprite.y, 320, 5)
-	end
-	--gfx.drawText("Time: " .. math.ceil(playTimer.value/1000), 35, 5)
+	-- if (theBikeL.isDrawn) then
+	-- 	gfx.drawText("X: " .. theBikeL.sprite.x, 5, 5)
+	-- 	gfx.drawText("Y: " .. theBikeL.sprite.y, 320, 5)
+	-- else
+	-- 	gfx.drawText("X: " .. theBikeR.sprite.x, 5, 5)
+	-- 	gfx.drawText("Y: " .. theBikeR.sprite.y, 320, 5)
+	-- end
+	gfx.drawText("crank: " .. playdate.getCrankPosition(), 5, 5)
 end
