@@ -57,7 +57,7 @@ local function initialize()
 	--playerSprite:setCollideRect(0, 0, playerSprite:getSize())
 	--playerSprite:add()
 
-	local bikeImageR = gfx.image.new("images/bike_r")
+	local bikeImageR = gfx.image.new("images/bike_r_rider")
 	local bikeImageL = gfx.image.new("images/bike_l")
 
 	theBikeL = {sprite = gfx.sprite.new(bikeImageL), isDrawn = false, xSpeed = 0, ySpeed = 0}
